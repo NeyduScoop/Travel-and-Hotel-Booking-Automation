@@ -1,0 +1,90 @@
+name: Regression Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target Wakanow environment
+        type: choice
+        options: [DEVTEST, PREPROD]
+        default: DEVTEST
+      browser:
+        description: Browser project
+        type: choice
+        options: [chromium, firefox, webkit]
+        default: chromium
+      grep:
+        description: Optional extra tag filter, e.g. @flights (combined with @regression)
+        type: string
+        required: false
+        default: ''
+  push:
+    branches: ['release/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: regression-${{ github.workflow }}-${{ github.ref }}-${{ inputs.browser || 'chromium' }}
+  cancel-in-progress: false
+
+jobs:
+  regression:
+    name: Regression (${{ inputs.browser || 'chromium' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      CI: 'true'
+      TEST_ENV: ${{ inputs.environment || vars.TEST_ENV || 'DEVTEST' }}
+      BROWSER: ${{ inputs.browser || 'chromium' }}
+      EXTRA_GREP: ${{ inputs.grep || '' }}
+      PRIME_EMAIL: ${{ secrets.PRIME_EMAIL }}
+      PRIME_PASSWORD: ${{ secrets.PRIME_PASSWORD }}
+      AFFILIATE_EMAIL: ${{ secrets.AFFILIATE_EMAIL }}
+      AFFILIATE_PASSWORD: ${{ secrets.AFFILIATE_PASSWORD }}
+      # Regression never authenticates payments; booking-creating checks report BLOCKED unless run from e2e-tests.yml.
+      ALLOW_TEST_BOOKING_SUBMISSION: 'false'
+      ALLOW_TEST_PAYMENT_AUTHENTICATION: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps "$BROWSER"
+
+      - name: TypeScript validation
+        run: npm run typecheck
+
+      - name: Run regression suite
+        shell: bash
+        run: |
+          if [ -n "$EXTRA_GREP" ]; then
+            npx playwright test --project="$BROWSER" --grep "(?=.*@regression)(?=.*$EXTRA_GREP)"
+          else
+            npx playwright test --project="$BROWSER" --grep @regression
+          fi
+
+      - name: Upload HTML report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-playwright-report-${{ env.BROWSER }}-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload failure evidence and results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-test-results-${{ env.BROWSER }}-${{ github.run_id }}
+          path: test-results/
+          retention-days: 30

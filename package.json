@@ -1,0 +1,53 @@
+{
+  "name": "wakanow-playwright-automation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright + TypeScript smoke, regression and E2E automation for Wakanow Web V4 (Flights, Hotels, Packages, Tours, Visa, Travel Add-ons, Prime, PRIME Flights, PRIME Hotels, Affiliate).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "playwright test --project=chromium",
+    "test:smoke": "playwright test --project=chromium --grep @smoke",
+    "test:regression": "playwright test --project=chromium --grep @regression",
+    "test:flights": "playwright test --project=chromium --grep @flights",
+    "test:hotels": "playwright test --project=chromium --grep @hotels",
+    "test:tours": "playwright test --project=chromium --grep @tours",
+    "test:visa": "playwright test --project=chromium --grep @visa",
+    "test:prime": "playwright test --project=chromium --grep @prime",
+    "test:travel-addons": "playwright test --project=chromium --grep @travel-addons",
+    "test:packages": "playwright test --project=chromium --grep @packages",
+    "test:prime-flights": "playwright test --project=chromium --grep @prime-flights",
+    "test:prime-hotels": "playwright test --project=chromium --grep @prime-hotels",
+    "test:affiliate": "playwright test --project=chromium --grep @affiliate",
+    "test:payment": "playwright test --project=chromium --grep @payment",
+    "test:confirmation": "playwright test --project=chromium --grep @confirmation",
+    "test:e2e": "playwright test --project=chromium --grep @e2e --workers=2",
+    "test:e2e:flights": "playwright test --project=chromium --grep \"(?=.*@e2e)(?=.*@flights)\" --workers=2",
+    "test:e2e:hotels": "playwright test --project=chromium --grep \"(?=.*@e2e)(?=.*@hotels)\" --workers=2",
+    "test:e2e:packages": "playwright test --project=chromium --grep \"(?=.*@e2e)(?=.*@packages)\" --workers=2",
+    "test:e2e:tours": "playwright test --project=chromium --grep \"(?=.*@e2e)(?=.*@tours)\" --workers=2",
+    "test:e2e:visa": "playwright test --project=chromium --grep \"(?=.*@e2e)(?=.*@visa)\" --workers=2",
+    "test:e2e:travel-addons": "playwright test --project=chromium --grep \"(?=.*@e2e)(?=.*@travel-addons)\" --workers=2",
+    "test:e2e:prime": "playwright test --project=chromium --grep \"(?=.*@e2e)(?=.*@prime)\" --workers=2",
+    "test:e2e:prime-flights": "playwright test --project=chromium --grep \"(?=.*@e2e)(?=.*@prime-flights)\" --workers=2",
+    "test:e2e:prime-hotels": "playwright test --project=chromium --grep \"(?=.*@e2e)(?=.*@prime-hotels)\" --workers=2",
+    "test:e2e:affiliate": "playwright test --project=chromium --grep \"(?=.*@e2e)(?=.*@affiliate)\" --workers=2",
+    "test:critical": "playwright test --project=chromium --grep @critical",
+    "test:headed": "playwright test --project=chromium --headed --workers=1",
+    "test:debug": "playwright test --project=chromium --debug",
+    "test:chromium": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:webkit": "playwright test --project=webkit",
+    "test:cross-browser": "playwright test --project=chromium --project=firefox --project=webkit --grep @smoke",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "report": "playwright show-report playwright-report",
+    "report:open": "playwright show-report playwright-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/node": "^22.20.5",
+    "dotenv": "^16.6.1",
+    "typescript": "^5.9.3"
+  }
+}

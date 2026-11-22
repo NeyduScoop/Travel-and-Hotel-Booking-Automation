@@ -1,0 +1,165 @@
+{
+  
+  "general": {
+    "phone": "09090909090",
+    "email": "Wakanowtester3@gmail.com",
+    "fallbackEmails": [
+        "Wakanowtester4@gmail.com",
+        "Wakanowtester5@gmail.com"
+      ],
+    "pnr": "FGT346",
+    "timeOfTravel": "12:00 AM"
+  },
+
+  "passengers": {
+    "adults": [
+      {
+        "title": "Mr",
+        "firstName": "John",
+        "lastName": "Adore",
+        "dateOfBirth": "1995-05-25",
+        "nationality": "Nigeria",
+        "gender": "Male",
+        "passportNumber": "AB1235671",
+        "passportExpiryDate": "2035-05-25",
+        "issuingCountry": "Nigeria"
+      },
+      {
+        "title": "Mrs",
+        "firstName": "Jane",
+        "lastName": "Adore",
+        "dateOfBirth": "1995-05-25",
+        "nationality": "Nigeria",
+        "gender": "Female",
+        "passportNumber": "CD1234567",
+        "passportExpiryDate": "2035-05-25",
+        "issuingCountry": "Nigeria"
+      }
+    ],
+
+    "children": [
+      {
+        "title": "Mr",
+        "firstName": "Femi",
+        "lastName": "Adore",
+        "dateOfBirth": "2016-05-25",
+        "nationality": "Nigeria",
+        "gender": "Male",
+        "passportNumber": "CH1234567",
+        "passportExpiryDate": "2035-05-25",
+        "issuingCountry": "Nigeria"
+      }
+    ],
+
+    "infants": [
+      {
+        "title": "Ms",
+        "firstName": "Cynthia",
+        "lastName": "Adore",
+        "dateOfBirth": "2025-05-25",
+        "nationality": "Nigeria",
+        "gender": "Female",
+        "passportNumber": "IN1234567",
+        "passportExpiryDate": "2035-05-25",
+        "issuingCountry": "Nigeria"
+      }
+    ]
+  },
+
+  "flight": {
+    "departure": {
+      "name": "Lagos",
+      "code": "LOS"
+    },
+    "destination": {
+      "name": "New York", 
+      "code": "JFK",
+      "fallback": [
+        { "name": "Abuja", "code": "ABV" },
+        { "name": "Paris", "code": "CDG" },
+        { "name": "Dubai", "code": "DXB" },
+        { "name": "New York", "code": "JFK" },
+        { "name": "Frankfurt", "code": "FRA" },
+        { "name": "Amsterdam", "code": "AMS" },
+        { "name": "Istanbul", "code": "IST" },
+        { "name": "Johannesburg", "code": "JNB" },
+        { "name": "Cape Town", "code": "CPT" },
+        { "name": "Nairobi", "code": "NBO" }
+      ]
+    },
+    "passengers": {
+      "adults": 2,
+      "children": 1,
+      "infants": 1
+    },
+    "cabin": "Economy"
+  },
+
+  "hotel": {
+    "destination": {
+      "primary": "London, United Kingdom",
+      "fallback": [
+        "Makkah, Saudi Arabia",
+        "Dubai, United Arab Emirates"
+      ]
+    },
+    "guests": {
+      "adults": 1,
+      "children": 1
+    },
+    "rooms": 1
+  },
+
+  "package": {
+    "departure": {
+      "name": "Lagos",
+      "code": "LOS"
+    },
+    "destinations": {
+      "primary": "Medina",
+      "fallback": [
+        "London",
+        "Kenya"
+      ]
+    },
+    "travellers": 2
+  },
+
+  "visa": {
+    "passportCountry": "Ghana",
+    "destinations": {
+      "primary": "France",
+      "fallback": [
+        "Canada",
+        "Germany"
+      ]
+    }
+  },
+
+  "prime": {
+    "credentials": {
+      "source": ".env",
+      "emailVariable": "PRIME_EMAIL",
+      "passwordVariable": "PRIME_PASSWORD"
+    }
+  },
+
+"affiliate": {
+    "credentials": {
+      "source": ".env",
+      "emailVariable": "AFFILIATE_EMAIL",
+      "passwordVariable": "AFFILIATE_PASSWORD"
+    }
+  },  
+
+  "travelAddons": {
+    "from": "LOS",
+    "timeOfTravel": "12:00 AM",
+    "PNR": "FGT346"
+  },
+  "tours": {
+      "country": "United Kingdom",
+      "destination": "london",
+      "travellers": 2
+    }
+}

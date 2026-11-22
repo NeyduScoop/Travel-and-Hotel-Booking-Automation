@@ -1,0 +1,92 @@
+name: E2E Booking Tests
+
+# Manual only: E2E flows create real (unpaid) DEVTEST bookings and are never run on pull requests.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target Wakanow environment (PRODUCTION is not offered)
+        type: choice
+        options: [DEVTEST, PREPROD]
+        default: DEVTEST
+      suite:
+        description: E2E scope
+        type: choice
+        options: ['@e2e', '@e2e.*@travel-addons|@travel-addons.*@e2e', '@e2e.*@flights|@flights.*@e2e', '@e2e.*@hotels|@hotels.*@e2e', '@e2e.*@packages|@packages.*@e2e', '@e2e.*@tours|@tours.*@e2e', '@e2e.*@prime|@prime.*@e2e', '@e2e.*@affiliate|@affiliate.*@e2e', '@e2e.*@visa|@visa.*@e2e']
+        default: '@e2e'
+      allow_booking_submission:
+        description: I authorise creating unpaid test bookings (Proceed to Pay / Pay at Bank)
+        type: boolean
+        default: false
+      allow_payment_authentication:
+        description: I authorise the test-mode card / bank-authentication route
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    name: E2E (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    # Configure required reviewers on this GitHub Environment so every E2E run needs explicit approval.
+    environment: e2e-${{ inputs.environment == 'PREPROD' && 'preprod' || 'devtest' }}
+    env:
+      CI: 'true'
+      TEST_ENV: ${{ inputs.environment }}
+      ALLOW_TEST_BOOKING_SUBMISSION: ${{ inputs.allow_booking_submission }}
+      ALLOW_TEST_PAYMENT_AUTHENTICATION: ${{ inputs.allow_payment_authentication }}
+      PRIME_EMAIL: ${{ secrets.PRIME_EMAIL }}
+      PRIME_PASSWORD: ${{ secrets.PRIME_PASSWORD }}
+      AFFILIATE_EMAIL: ${{ secrets.AFFILIATE_EMAIL }}
+      AFFILIATE_PASSWORD: ${{ secrets.AFFILIATE_PASSWORD }}
+      TEST_CARD_NUMBER: ${{ secrets.TEST_CARD_NUMBER }}
+      TEST_CARD_EXPIRY: ${{ secrets.TEST_CARD_EXPIRY }}
+      TEST_CARD_CVV: ${{ secrets.TEST_CARD_CVV }}
+      TEST_CARD_PIN: ${{ secrets.TEST_CARD_PIN }}
+      TEST_CARD_OTP: ${{ secrets.TEST_CARD_OTP }}
+      E2E_GREP: ${{ inputs.suite }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: TypeScript validation
+        run: npm run typecheck
+
+      - name: Run E2E flows
+        shell: bash
+        run: npx playwright test --project=chromium --workers=2 --grep "$E2E_GREP"
+
+      - name: Upload HTML report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-playwright-report-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload evidence and results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results-${{ github.run_id }}
+          path: test-results/
+          retention-days: 30

@@ -1,0 +1,28 @@
+node_modules/
+/test-results/
+/playwright/.auth/
+/test-results-probe/
+/test-results-visa/
+/reporters/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+/reports/execution/**/html-*/
+/reports/execution/**/*.log
+# Identity-document test assets and their expected values (personal data): local only
+/data/common/passport-images/
+# Raw run evidence may contain booking references and traveller data
+/evidence/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+/docs/history/
+/docs/EXECUTION-REPORT.md
+/reports/
+wakanow-playwright-automation.zip
+wakanow-playwright-automation/CLAUDE.md/
+Prompt.md
+CLAUDE.md
