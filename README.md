@@ -99,4 +99,4 @@ See `docs/CI-CD-GUIDE.md`.
 - `docs/TEST-COVERAGE.md`: every scenario with ID, suite, priority, status and spec
 - `docs/CI-CD-GUIDE.md`: workflows, secrets and safety
 - `docs/EXECUTION-REPORT.md`: latest validation results and defect register
-- `CLAUDE.md`: maintenance rules
+
