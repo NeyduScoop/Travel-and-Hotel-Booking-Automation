@@ -96,12 +96,36 @@ export class TravellerForm {
     return this.dateSelect('passportExpiry', 'Year');
   }
 
+  get titleList(): Locator {
+    return this.titleField.getByRole('listbox');
+  }
+
+  /**
+   * Open the Title dropdown and wait until its options are rendered. The field must be visible and enabled
+   * first (the PAX page hydrates after it appears); a click lost to hydration is retried.
+   */
+  async openTitleList(): Promise<void> {
+    await expect(this.titleTrigger, `traveller ${this.index + 1} Title field`).toBeVisible({ timeout: 30_000 });
+    await expect(this.titleTrigger).toBeEnabled();
+    await expect(async () => {
+      if (!(await this.titleList.isVisible())) await this.titleTrigger.click();
+      await expect(this.titleList).toBeVisible({ timeout: 3_000 });
+      await expect(this.titleList.getByRole('option').first()).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 30_000, intervals: [500, 1_000, 2_000] });
+  }
+
+  async closeTitleList(): Promise<void> {
+    if (!(await this.titleList.isVisible())) return;
+    await this.page.keyboard.press('Escape');
+    if (await this.titleList.isVisible()) await this.titleTrigger.click();
+    await expect(this.titleList).toBeHidden();
+  }
+
   /** Every option currently offered by this traveller's Title dropdown (closes it again). */
   async titleOptions(): Promise<string[]> {
-    await this.titleTrigger.click();
-    const options = (await this.titleField.getByRole('option').allInnerTexts()).map((t) => t.trim()).filter(Boolean);
-    await this.page.keyboard.press('Escape');
-    if (await this.titleField.getByRole('listbox').isVisible()) await this.titleTrigger.click();
+    await this.openTitleList();
+    const options = (await this.titleList.getByRole('option').allInnerTexts()).map((t) => t.trim()).filter(Boolean);
+    await this.closeTitleList();
     return options;
   }
 
@@ -110,14 +134,16 @@ export class TravellerForm {
   }
 
   async selectTitle(title: string): Promise<void> {
-    await this.titleTrigger.click();
+    await this.openTitleList();
     const option = this.titleField.getByRole('option', { name: title, exact: true });
     if (!(await option.count())) {
       const offered = (await this.titleField.getByRole('option').allInnerTexts()).map((t) => t.trim());
       throw new Error(`Title "${title}" is not offered for traveller ${this.index + 1} (offered: ${offered.join(', ')}). Test data and application disagree.`);
     }
     await option.click();
-    await expect(this.titleTrigger).toContainText(title);
+    // Exact match: "Mr" must not pass for "Mrs".
+    await expect(this.titleTrigger).toHaveText(new RegExp(`^\\s*${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`));
+    await expect(this.titleList).toBeHidden();
   }
 
   /** Set gender only when the radios are editable (a title auto-selects and locks gender). */

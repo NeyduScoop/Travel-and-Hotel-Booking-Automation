@@ -6,7 +6,7 @@ import { passengerData } from '../data/common/passengers.data';
 import { addDays, ageOn, futureDate, parseIsoDate } from './date.utils';
 import { packageData } from '../data/packages/package.data';
 import type { FlightSearchCriteria, CabinClass, MultiCityLegCriteria, TripType } from '../types/flight.types';
-import type { PackageSearchCriteria } from '../types/package.types';
+import type { PackageDestination, PackageSearchCriteria } from '../types/package.types';
 import type { HotelSearchCriteria } from '../types/hotel.types';
 import type { TourSearchCriteria } from '../types/tour.types';
 import type { Location, PassengerCounts, Traveller } from '../types/common.types';
@@ -94,11 +94,12 @@ export const DataFactory = {
     ];
   },
 
-  packageSearch(destination: string = packageData.destinations.primary, offsetDays: number = dateOffsets.tourStartDays): PackageSearchCriteria {
+  packageSearch(destination: PackageDestination = packageData.destinations.primary, offsetDays: number = dateOffsets.tourStartDays): PackageSearchCriteria {
     const departureDate = futureDate(offsetDays);
     return {
       departure: packageData.departure,
-      destination,
+      destination: destination.name,
+      destinationCountry: destination.country,
       departureDate,
       returnDate: addDays(departureDate, 5),
       adults: packageData.travellers,

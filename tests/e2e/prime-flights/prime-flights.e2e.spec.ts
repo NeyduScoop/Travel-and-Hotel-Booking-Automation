@@ -53,7 +53,7 @@ test.describe('PRIME Flights E2E', { tag: [Tag.e2e, Tag.primeFlights, Tag.prime,
       .equal('Flight total = advertised PRIME fare', listingPrime ?? '', PrimeBookingPage.sectionTotal(pay.breakdown))
       .containsAny('Departure date', dateVariants(c.departureDate), conf.text)
       .contains('Route', c.destination.code, conf.text);
-    plan.members.forEach((m, i) => check.contains(`PRIME member ${i + 1} on the booking`, confirmationName(m.traveller.lastName), confText, 'name normalised: upper case, hyphen = space'));
+    plan.members.forEach((m, i) => check.containsPrivate(`PRIME member ${i + 1} on the booking`, confirmationName(m.traveller.lastName), confText, 'surname compared (upper case, hyphen = space); not reported'));
     const integrity = priceIntegrity(pay.breakdown);
     check.equal('Summary total = Σ line items (incl. PRIME discount)', integrity.expected, integrity.displayed);
     paymentChecks(check, pay);

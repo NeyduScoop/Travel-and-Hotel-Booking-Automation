@@ -116,10 +116,19 @@
       "code": "LOS"
     },
     "destinations": {
-      "primary": "Medina",
+      "primary": {
+        "name": "Medina",
+        "country": "Saudi Arabia"
+      },
       "fallback": [
-        "London",
-        "Kenya"
+        {
+          "name": "London",
+          "country": "United Kingdom"
+        },
+        {
+          "name": "Nairobi",
+          "country": "Kenya"
+        }
       ]
     },
     "travellers": 2

@@ -52,7 +52,7 @@ test.describe('PRIME Hotels E2E', { tag: [Tag.e2e, Tag.primeHotels, Tag.prime, T
       .containsAny('Check-in', dateVariants(criteria.checkIn), conf.text)
       .containsAny('Check-out', dateVariants(criteria.checkOut), conf.text)
       .equal('PRIME room price = Stay Total + Service Charge on the summary', room.primePrice ?? room.total, hotelRoomPriceOnSummary(conf.text) ?? '(not found on confirmation)');
-    plan.members.forEach((m, i) => check.contains(`PRIME member ${i + 1} on the booking`, confirmationName(m.traveller.lastName), confText, 'name normalised: upper case, hyphen = space'));
+    plan.members.forEach((m, i) => check.containsPrivate(`PRIME member ${i + 1} on the booking`, confirmationName(m.traveller.lastName), confText, 'surname compared (upper case, hyphen = space); not reported'));
     const integrity = priceIntegrity(pay.breakdown);
     check.equal('Summary total = Σ line items (incl. PRIME discount)', integrity.expected, integrity.displayed);
     paymentChecks(check, pay);

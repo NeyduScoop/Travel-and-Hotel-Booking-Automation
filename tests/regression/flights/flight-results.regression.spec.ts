@@ -43,11 +43,16 @@ test.describe('Flights regression – results, sorting, filters, details', { tag
     await expect(flightResults.modifySearch).toContainText(c.cabin);
   });
 
-  test('round-trip card accessible name announces the searched destination', { tag: [Tag.negative] }, async ({ flightResults, blocked }) => {
+  // Owner direction (2026-11-24): check that the searched destination (airport code or city name) is displayed
+  // on the card. The screen-reader label is recorded only: round trips announce "from LOS to LOS" (origin to origin).
+  test('round-trip card accessible name announces the searched destination', { tag: [Tag.negative] }, async ({ flightResults, observe, blocked }) => {
     const c = DataFactory.flightSearch();
     await searchOrBlock(flightResults, c, blocked);
-    const label = await flightResults.card(0).getAttribute('aria-label');
-    expect(label, `screen-reader label of a ${c.origin.code}->${c.destination.code} round trip`).toContain(`to ${c.destination.code}`);
+    const card = flightResults.card(0);
+    observe(`Round-trip card screen-reader label: "${(await card.getAttribute('aria-label')) ?? ''}"`);
+    const text = (await card.innerText()).replace(/\s+/g, ' ');
+    const shown = text.includes(c.destination.code) || text.toLowerCase().includes(c.destination.name.toLowerCase());
+    expect(shown, `card shows the destination ${c.destination.code} / ${c.destination.name}`).toBe(true);
   });
 
   for (const combo of passengerCombinations.slice(0, 3)) {

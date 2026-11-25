@@ -1,6 +1,6 @@
 import { test, expect, Tag } from '../../../fixtures/test.fixture';
 import { DataFactory } from '../../../utils/data.factory';
-import { packageDestinationsInPriority } from '../../../data/packages/package.data';
+import { packageDestinationLabel, packageDestinationsInPriority } from '../../../data/packages/package.data';
 import { PackageBuilderPage } from '../../../pages/packages/PackageBuilderPage';
 import { PackageFallbackLog } from '../../../pages/packages/PackageSearchPage';
 import { completeStandardCart, payAndConfirm, priceIntegrity } from '../../../utils/flows';
@@ -19,11 +19,11 @@ test.describe('Packages E2E', { tag: [Tag.e2e, Tag.packages, Tag.confirmation] }
     for (const destination of packageDestinationsInPriority) {
       await packageSearch.openSearch();
       const c = DataFactory.packageSearch(destination, offset);
-      if (!(await packageSearch.tryFill(c))) { log.record({ destination, outcome: 'no-suggestion' }); continue; }
+      if (!(await packageSearch.tryFill(c))) { log.record({ destination: packageDestinationLabel(destination), outcome: 'no-suggestion' }); continue; }
       await packageSearch.build();
       const outcome = await packageBuilder.hotelResults.waitForOutcome();
-      if (outcome.kind === 'results') { log.record({ destination, outcome: 'used' }); criteria = c; break; }
-      log.record({ destination, outcome: 'no-results', reason: outcome.message.slice(0, 100) });
+      if (outcome.kind === 'results') { log.record({ destination: packageDestinationLabel(destination), outcome: 'used' }); criteria = c; break; }
+      log.record({ destination: packageDestinationLabel(destination), outcome: 'no-results', reason: outcome.message.slice(0, 100) });
     }
     observe(`Package destinations: ${log.summary()}`);
     if (!criteria) blocked(`MISSING INVENTORY: no configured package destination returned hotels (${log.summary()}).`);

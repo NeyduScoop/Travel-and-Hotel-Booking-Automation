@@ -1,5 +1,7 @@
 import { test, expect, Tag } from '../../../fixtures/test.fixture';
 import { visaData, visaDestinationsInPriority } from '../../../data/visa/visa.data';
+import { leadAdult, primaryContact } from '../../../data/common/passengers.data';
+import { nairaAfter } from '../../../utils/confirmation';
 import type { VisaHomePage } from '../../../pages/visa/VisaHomePage';
 
 /** Resolve the configured destination (primary -> fallbacks) or mark the test BLOCKED. */
@@ -79,5 +81,26 @@ test.describe('Visa regression', { tag: [Tag.regression, Tag.visa] }, () => {
     const fee = Number(/Visa Consultation\s*₦([\d,]+)/.exec(before.text)?.[1].replace(/,/g, ''));
     await visaPackage.removeConsultation.click();
     await expect.poll(async () => (await visaPackage.lineAmounts()).total).toBe(before.total - fee);
+  });
+  // Screens after "Get Started" (inspected 2026-11-23). Stops before "Proceed to payment", which creates a booking.
+  test('application: applicant step prefills passport nationality and contact, review requires Terms', { tag: [Tag.critical, Tag.positive] }, async ({ visaHome, visaPackage, visaApplication, blocked, observe }) => {
+    const destination = await selectConfiguredDestination(visaHome, blocked, observe);
+    await visaHome.checkRequirements.click();
+    await visaPackage.waitForRequirements(destination);
+    const { total } = await visaPackage.lineAmounts();
+    await visaPackage.contactEmail.fill(primaryContact.email);
+    await visaPackage.contactPhone.fill(primaryContact.phone);
+    await visaPackage.getStarted.click();
+    await visaApplication.waitForTravellerStep();
+    await expect(visaApplication.nationality()).toHaveText(new RegExp(visaData.passportCountry, 'i'));
+    await expect(visaApplication.email()).toHaveValue(primaryContact.email);
+    await expect(visaApplication.sidebar).toContainText(destination);
+    await visaApplication.fillTraveller(leadAdult);
+    await visaApplication.continueToReview();
+    await expect(visaApplication.proceedButton).toBeDisabled();
+    await visaApplication.acceptTerms();
+    await expect(visaApplication.proceedButton).toBeEnabled();
+    const sidebar = (await visaApplication.sidebar.innerText()).replace(/\s+/g, ' ');
+    expect(nairaAfter(sidebar, 'Total'), 'application total = requirements total').toBe(total);
   });
 });

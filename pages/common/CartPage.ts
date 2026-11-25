@@ -151,6 +151,22 @@ export class CartPage extends BasePage {
     await expect(this.contact.email).toBeVisible({ timeout: timeouts.cart });
   }
 
+  /**
+   * PAX page fully loaded: "Traveller Details" shown, `expected` traveller blocks rendered (blocks can appear a
+   * few seconds after the cart) and every Title field visible and enabled.
+   */
+  async waitForTravellerForms(expected?: number): Promise<number> {
+    await this.waitForReady();
+    await expect(this.travellerDetailsHeading).toBeVisible({ timeout: timeouts.cart });
+    const count = await this.travellerCount();
+    if (expected !== undefined) expect(count, 'traveller blocks on the PAX page').toBe(expected);
+    for (let i = 0; i < count; i += 1) {
+      await expect(this.traveller(i).titleTrigger).toBeVisible({ timeout: timeouts.cart });
+      await expect(this.traveller(i).titleTrigger).toBeEnabled();
+    }
+    return count;
+  }
+
   /** Text of the "Booking Summary" section (item line, route, flight number, baggage...). */
   async bookingSummaryText(): Promise<string> {
     const heading = this.page.getByRole('heading', { name: 'Booking Summary', level: 2 });
@@ -175,9 +191,15 @@ export class CartPage extends BasePage {
     for (const [i, t] of travellers.entries()) await this.traveller(i).fill(t, contact);
   }
 
+  /** Tick "Accept Terms and Conditions" once it is visible and enabled; retried if a re-render clears it. */
   async acceptTerms(): Promise<void> {
-    await this.termsCheckbox.check();
-    await expect(this.termsCheckbox).toBeChecked();
+    await this.termsCheckbox.scrollIntoViewIfNeeded();
+    await expect(this.termsCheckbox).toBeVisible({ timeout: timeouts.cart });
+    await expect(this.termsCheckbox).toBeEnabled();
+    await expect(async () => {
+      if (!(await this.termsCheckbox.isChecked())) await this.termsCheckbox.check();
+      await expect(this.termsCheckbox).toBeChecked({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
   }
 
   async visibleAlerts(): Promise<string[]> {

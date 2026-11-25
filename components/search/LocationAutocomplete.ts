@@ -46,6 +46,8 @@ export class LocationAutocomplete {
       typeof option === 'string' && /^[A-Z]{3}$/.test(option)
         ? leaves.filter({ has: this.page.getByText(option, { exact: true }) })
         : leaves.filter({ hasText: option });
+    // The list re-filters while results stream in: wait for the intended option itself, not just any option.
+    await expect(matcher.first(), `suggestion matching ${String(option)} for "${query}"`).toBeVisible({ timeout: timeouts.autocomplete });
     await matcher.first().click();
     await expect(this.input).toHaveValue(typeof expectedValue === 'string' ? new RegExp(escape(expectedValue)) : expectedValue);
     return this.input.inputValue();

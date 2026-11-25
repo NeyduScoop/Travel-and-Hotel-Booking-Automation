@@ -1,37 +1,38 @@
 import { test, expect, Tag } from '../../../fixtures/test.fixture';
 import { DataFactory } from '../../../utils/data.factory';
-import { packageData, packageDestinationsInPriority } from '../../../data/packages/package.data';
+import { packageData, packageDestinationLabel, packageDestinationsInPriority } from '../../../data/packages/package.data';
 import { PackageBuilderPage } from '../../../pages/packages/PackageBuilderPage';
 import { PackageFallbackLog } from '../../../pages/packages/PackageSearchPage';
 import { priceIntegrity } from '../../../utils/flows';
 import { isoDate } from '../../../utils/date.utils';
 import { timeouts } from '../../../config/test.config';
+import type { PackageDestination } from '../../../types/package.types';
 
 test.describe('Packages regression', { tag: [Tag.regression, Tag.packages] }, () => {
   test.describe.configure({ timeout: timeouts.bookingFlow });
 
   test('package fallback: configured destinations are tried in priority order until one has results', { tag: [Tag.critical, Tag.positive] }, async ({ packageSearch, packageBuilder, observe, blocked }) => {
     const log = new PackageFallbackLog();
-    let used: string | undefined;
+    let used: PackageDestination | undefined;
     for (const destination of packageDestinationsInPriority) {
       await packageSearch.openSearch();
       if (!(await packageSearch.tryFill(DataFactory.packageSearch(destination)))) {
-        log.record({ destination, outcome: 'no-suggestion', reason: 'destination could not be selected in the search widget' });
+        log.record({ destination: packageDestinationLabel(destination), outcome: 'no-suggestion', reason: 'destination could not be selected in the search widget' });
         continue;
       }
       await packageSearch.build();
       const outcome = await packageBuilder.hotelResults.waitForOutcome();
       if (outcome.kind === 'results') {
-        log.record({ destination, outcome: 'used' });
+        log.record({ destination: packageDestinationLabel(destination), outcome: 'used' });
         used = destination;
         break;
       }
-      log.record({ destination, outcome: 'no-results', reason: outcome.message.slice(0, 120) });
+      log.record({ destination: packageDestinationLabel(destination), outcome: 'no-results', reason: outcome.message.slice(0, 120) });
     }
     observe(`Package destinations attempted: ${log.summary()}`);
     if (!used) blocked(`MISSING INVENTORY: every configured package destination failed (${log.summary()}).`);
     // The fallback order is never reshuffled and no unconfigured destination is tried.
-    expect(log.attempts.map((a) => a.destination)).toEqual(packageDestinationsInPriority.slice(0, log.attempts.length));
+    expect(log.attempts.map((a) => a.destination)).toEqual(packageDestinationsInPriority.slice(0, log.attempts.length).map(packageDestinationLabel));
   });
 
   test('hotel step results match the package search criteria', { tag: [Tag.positive] }, async ({ packageSearch, packageBuilder, blocked }) => {

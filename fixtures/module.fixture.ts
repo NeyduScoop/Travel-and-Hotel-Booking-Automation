@@ -13,6 +13,7 @@ import { TourResultsPage } from '../pages/tours/TourResultsPage';
 import { TourDetailsPage } from '../pages/tours/TourDetailsPage';
 import { VisaHomePage } from '../pages/visa/VisaHomePage';
 import { VisaPackagePage } from '../pages/visa/VisaPackagePage';
+import { VisaApplicationPage } from '../pages/visa/VisaApplicationPage';
 import { PrimeHomePage } from '../pages/prime/PrimeHomePage';
 import { PrimeMembershipPage } from '../pages/prime/PrimeMembershipPage';
 import { TravelAddonsPage } from '../pages/travel-addons/TravelAddonsPage';
@@ -39,6 +40,7 @@ export interface ModuleFixtures {
   tourDetails: TourDetailsPage;
   visaHome: VisaHomePage;
   visaPackage: VisaPackagePage;
+  visaApplication: VisaApplicationPage;
   primeHome: PrimeHomePage;
   primeMembership: PrimeMembershipPage;
   travelAddons: TravelAddonsPage;
@@ -67,6 +69,7 @@ export const test = base.extend<ModuleFixtures>({
   tourDetails: async ({ page }, use) => use(new TourDetailsPage(page)),
   visaHome: async ({ page }, use) => use(new VisaHomePage(page)),
   visaPackage: async ({ page }, use) => use(new VisaPackagePage(page)),
+  visaApplication: async ({ page }, use) => use(new VisaApplicationPage(page)),
   primeHome: async ({ page }, use) => use(new PrimeHomePage(page)),
   primeMembership: async ({ page }, use) => use(new PrimeMembershipPage(page)),
   travelAddons: async ({ page }, use) => use(new TravelAddonsPage(page)),

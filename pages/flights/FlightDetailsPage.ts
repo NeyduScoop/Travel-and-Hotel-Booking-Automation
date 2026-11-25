@@ -45,6 +45,34 @@ export class FlightDetailsPage extends BasePage {
     return text.flatMap((t) => [...t.matchAll(/Baggage\s+(\d+\s*×\s*\d+\s*kg)/gi)].map((m) => m[1].replace(/\s+/g, ' ')));
   }
 
+  /**
+   * Per leg (outbound/return/multi-city leg): each segment's flight time, each layover, and any technical
+   * stop. Observed 2026-11-24 (Kenya Airways LOS-NBO-JFK): "Flight no KQ535 · 22:40 · Lagos (LOS) · 5h 20m ·
+   * Non stop · …", then "Layover · in Jomo Kenyatta … · 17h 35m", then the connecting segment "… 15h · Non stop".
+   * A technical stop's ground time is part of its segment's flight time and is never counted separately.
+   */
+  async legBreakdown(card: Locator): Promise<{ heading: string; segments: number[]; layovers: number[]; technicalStops: string[] }[]> {
+    const texts = await this.legs(card).allInnerTexts();
+    const minutes = (s: string) => {
+      const h = /(\d+)h/.exec(s);
+      const m = /(\d+)m/.exec(s);
+      return (h ? Number(h[1]) * 60 : 0) + (m ? Number(m[1]) : 0);
+    };
+    return texts.map((t) => {
+      const lines = t.split('\n').map((l) => l.trim()).filter(Boolean);
+      const out = { heading: lines[0] ?? '', segments: [] as number[], layovers: [] as number[], technicalStops: [] as string[] };
+      lines.forEach((line, i) => {
+        if (/technical stop/i.test(line)) out.technicalStops.push(line);
+        if (!/^(\d+h(?: \d+m)?|\d+m)$/.test(line)) return;
+        const before = lines.slice(Math.max(0, i - 3), i);
+        if (before.some((l) => /^Layover\b/i.test(l))) out.layovers.push(minutes(line));
+        else if (before.some((l) => /technical stop/i.test(l)) && !/stop/i.test(lines[i + 1] ?? '')) return; // technical-stop ground time
+        else out.segments.push(minutes(line));
+      });
+      return out;
+    });
+  }
+
   async legHeadings(card: Locator): Promise<string[]> {
     return this.legs(card).getByRole('heading', { level: 4 }).allInnerTexts();
   }

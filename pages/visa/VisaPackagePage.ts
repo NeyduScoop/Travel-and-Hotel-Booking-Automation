@@ -8,9 +8,7 @@ import { parseNaira } from '../../utils/assertions';
  * contact details, destination requirement card (visa type, validity, processing time),
  * required documents, optional consultation and the "Order Summary" with "Get Started ₦X".
  *
- * The downstream applicant / document-upload / review / declaration pages (Project.md §13
- * steps 3-7) could not be reached with the configured destinations on DEVTEST, so they are
- * intentionally NOT modelled here; see docs/TEST-COVERAGE.md.
+ * "Get Started" leads to the application steps, modelled in VisaApplicationPage (inspected 2026-11-23).
  */
 export class VisaPackagePage extends BasePage {
   get resultMain(): Locator {

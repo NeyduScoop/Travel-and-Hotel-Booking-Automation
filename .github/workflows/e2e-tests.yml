@@ -51,13 +51,17 @@ jobs:
       TEST_CARD_CVV: ${{ secrets.TEST_CARD_CVV }}
       TEST_CARD_PIN: ${{ secrets.TEST_CARD_PIN }}
       TEST_CARD_OTP: ${{ secrets.TEST_CARD_OTP }}
+      KALABASH_PHONE: ${{ secrets.KALABASH_PHONE }}
+      KALABASH_PASSWORD: ${{ secrets.KALABASH_PASSWORD }}
+      KALABASH_PIN: ${{ secrets.KALABASH_PIN }}
+      TIME_OF_TRAVEL: ${{ vars.TIME_OF_TRAVEL }}
       E2E_GREP: ${{ inputs.suite }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -77,7 +81,7 @@ jobs:
 
       - name: Upload HTML report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: e2e-playwright-report-${{ github.run_id }}
           path: playwright-report/
@@ -85,7 +89,7 @@ jobs:
 
       - name: Upload evidence and results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: e2e-test-results-${{ github.run_id }}
           path: test-results/

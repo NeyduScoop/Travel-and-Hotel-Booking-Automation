@@ -40,8 +40,14 @@ export class FlightResultsPage extends BasePage {
 
   async bestDeals(): Promise<{ airlines: string[]; rows: BestDealsRow[] }> {
     const grid = this.bestDealsGrid;
-    const header = (await grid.getByRole('columnheader').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
-    const airlines = header.slice(1).map((h) => h.split(' ').slice(0, Math.ceil(h.split(' ').length / 2)).join(' ') || h);
+    // Airline name = the column logo's alt text (header text alone may or may not repeat the name).
+    const airlines = (
+      await grid.getByRole('columnheader').evaluateAll((ths) =>
+        ths.map((th) => th.querySelector('img')?.getAttribute('alt') ?? (th as HTMLElement).innerText),
+      )
+    )
+      .slice(1)
+      .map((a) => a.replace(/\s+/g, ' ').trim());
     const rows: BestDealsRow[] = [];
     for (const row of await grid.getByRole('row').all()) {
       const cells = (await row.getByRole('cell').allInnerTexts()).map((t) => t.trim());
@@ -160,10 +166,12 @@ export class FlightResultsPage extends BasePage {
   }
 
   async summaryOf(card: Locator): Promise<FlightCardSummary> {
-    const label = (await card.getAttribute('aria-label')) ?? '';
+    return FlightResultsPage.parseCard((await card.getAttribute('aria-label')) ?? '', await card.innerText());
+  }
+
+  private static parseCard(label: string, text: string): FlightCardSummary {
     const m = /^(.*) from (\w{3}) to (\w{3}), ([^,]+), (\d+) min, (₦[\d,]+)/.exec(label);
     if (!m) throw new Error(`Unexpected flight card label: "${label}"`);
-    const text = await card.innerText();
     const baggage = [...text.matchAll(/\d+\s*×\s*\d+\s*kg\s*(?:cabin|checked)/gi)].map((b) => b[0].replace(/\s+/g, ' '));
     return {
       airline: m[1].trim(),
@@ -176,9 +184,23 @@ export class FlightResultsPage extends BasePage {
     };
   }
 
+  /**
+   * Every visible card, read in ONE DOM pass. The list re-renders after group expansion/filtering, so
+   * per-index locators (`cards.nth(i)`) taken earlier can point at cards that no longer exist.
+   */
   async summaries(): Promise<FlightCardSummary[]> {
-    const cards = await this.cards.all();
-    return Promise.all(cards.map((c) => this.summaryOf(c)));
+    const raw = await this.cards.evaluateAll((els) => els.map((e) => ({ label: e.getAttribute('aria-label') ?? '', text: (e as HTMLElement).innerText })));
+    return raw.map((r) => FlightResultsPage.parseCard(r.label, r.text));
+  }
+
+  /** "Best Deals by Airline" cell for an airline column and stop-category row ("Non stop" | "1 Stop" | "2+ Stops"). */
+  bestDealsCell(airlineIndex: number, category: string): Locator {
+    return this.bestDealsGrid.getByRole('row').filter({ has: this.page.getByRole('cell', { name: category, exact: true }) }).getByRole('cell').nth(airlineIndex + 1);
+  }
+
+  /** Clicking a priced cell filters the results (observed 2026-11-24); the clicked cell is marked active. */
+  async isBestDealsCellActive(cell: Locator): Promise<boolean> {
+    return /\bwk-matrix__cell--active\b/.test((await cell.getAttribute('class')) ?? '');
   }
 
   card(index: number): Locator {

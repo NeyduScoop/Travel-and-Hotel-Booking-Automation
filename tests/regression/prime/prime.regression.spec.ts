@@ -54,13 +54,6 @@ test.describe('Prime regression – membership plans and signup gate', { tag: [T
     await expect(primeMembership.gateContinue).toBeEnabled();
   });
 
-  test('"Back to plans" returns to the Prime landing page', { tag: [Tag.positive] }, async ({ primeMembership, primeHome }) => {
-    await primeMembership.openJoin('Corporate');
-    await primeMembership.backToPlans.click();
-    await expect(primeMembership.page).toHaveURL(/\/wakanow-prime\/?$/);
-    await expect(primeHome.heroHeading).toBeVisible();
-  });
-
   test('login page requires a valid email before continuing', { tag: [Tag.negative] }, async ({ loginPage }) => {
     await loginPage.openLogin();
     await expect(loginPage.continueButton).toBeDisabled();

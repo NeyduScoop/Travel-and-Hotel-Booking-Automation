@@ -4,6 +4,7 @@ import { LocationAutocomplete } from '../../components/search/LocationAutocomple
 import { DatePicker } from '../../components/date-picker/DatePicker';
 import { TravellerSelector } from '../../components/passengers/TravellerSelector';
 import type { PackageDestinationAttempt, PackageSearchCriteria } from '../../types/package.types';
+import { destinationOptionPattern } from '../hotels/HotelSearchPage';
 
 /**
  * /packages — "Holiday Packages" search (From, Destination city, Departure/Return, Travelers,
@@ -32,18 +33,19 @@ export class PackageSearchPage extends BasePage {
     return this.from.select(query, code, code);
   }
 
-  /** Pick the first suggestion whose primary name is the destination (e.g. "Medina, Saudi Arabia" before "Medina, USA"). */
-  async selectDestination(destination: string): Promise<string> {
-    await this.destination.search(destination);
-    const options = this.destination.options;
-    const exact = options.filter({ has: this.page.locator('.wk-location__option-name', { hasText: new RegExp(`^\\s*${destination}\\s*$`, 'i') }) });
-    await ((await exact.count()) ? exact.first() : options.filter({ hasText: new RegExp(destination, 'i') }).first()).click();
-    return this.destination.value();
+  /**
+   * Pick the suggestion for the city AND its country. Options read "<city> <city>, <country>" and DEVTEST
+   * abbreviates some countries (observed 2026-11-23: "London, UK", "London, Canada", "London, USA";
+   * "Medina, Saudi Arabia", "Medina, USA"; "Nairobi, Kenya" plus Nairobi hotels/streets), so the
+   * hotel search's city+country matcher is reused. No other option is ever substituted.
+   */
+  async selectDestination(city: string, country: string): Promise<string> {
+    return this.destination.select(city, destinationOptionPattern(`${city}, ${country}`), new RegExp(city, 'i'));
   }
 
   async fill(c: PackageSearchCriteria): Promise<void> {
     await this.selectDeparture(c.departure.code, c.departure.name);
-    await this.selectDestination(c.destination);
+    await this.selectDestination(c.destination, c.destinationCountry);
     await this.dates.selectRange('Departure', c.departureDate, 'Return', c.returnDate);
     await this.travellers.open();
     await this.travellers.setCount('adult', c.adults);

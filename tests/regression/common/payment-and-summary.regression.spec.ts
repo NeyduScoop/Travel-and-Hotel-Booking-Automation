@@ -94,12 +94,20 @@ test.describe('Payment step and booking summary', { tag: [Tag.regression, Tag.pa
     expect((await cart.priceBreakdown.read()).addons.map((a) => a.name)).not.toContain(target!.name);
   });
 
-  test('Flights cart: add-ons are not pre-selected without the customer opting in', { tag: [Tag.flights, Tag.negative] }, async ({ page, requireCartCreation, observe, blocked }) => {
+  // Owner clarification (2026-11-24): some add-ons are pre-selected by business rule (D-13 closed as intended).
+  // What must hold is that every pre-selected add-on is itemised and charged at its listed price.
+  test('Flights cart: pre-selected add-ons are itemised and charged in the order summary', { tag: [Tag.flights, Tag.positive] }, async ({ page, requireCartCreation, observe, blocked }) => {
     void requireCartCreation;
     const { cart } = await flightToCart(page, DataFactory.oneWayFlight(), blocked);
+    await cart.waitForTravellerForms();
     await completeStandardCart(cart);
-    const preselected = (await cart.tripAddons.list()).filter((a) => a.selected);
-    observe(`Pre-selected paid add-ons: ${preselected.map((a) => `${a.name} ₦${a.price}`).join(', ') || 'none'}`);
-    expect(preselected.map((a) => a.name), 'paid add-ons must be opt-in ("All add-ons are optional")').toEqual([]);
+    const offered = await cart.tripAddons.list();
+    const preselected = offered.filter((a) => a.selected);
+    observe(`Pre-selected add-ons (business rule): ${preselected.map((a) => `${a.name} ₦${a.price}`).join(', ') || 'none'} of ${offered.length} offered`);
+    const summary = await cart.priceBreakdown.read();
+    expect(summary.addons.map((a) => a.name).sort(), 'order summary lists exactly the pre-selected add-ons').toEqual(preselected.map((a) => a.name).sort());
+    for (const a of preselected) {
+      expect(summary.addons.find((s) => s.name === a.name)?.amount, `${a.name} charged at its listed price`).toBe(a.price);
+    }
   });
 });

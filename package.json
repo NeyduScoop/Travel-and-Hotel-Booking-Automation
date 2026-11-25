@@ -42,12 +42,14 @@
     "test:cross-browser": "playwright test --project=chromium --project=firefox --project=webkit --grep @smoke",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "report": "playwright show-report playwright-report",
-    "report:open": "playwright show-report playwright-report"
+    "report:open": "playwright show-report playwright-report",
+    "passport:specimen": "tsx scripts/generate-passport-specimen.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.65.1",
     "@types/node": "^22.20.5",
     "dotenv": "^16.6.1",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   }
 }

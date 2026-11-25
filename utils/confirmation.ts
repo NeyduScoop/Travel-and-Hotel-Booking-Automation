@@ -51,6 +51,16 @@ export class IntegrityCheck {
     return this;
   }
 
+  /**
+   * Like contains(), for personal data that must never be reported (PRIME members' names): the real value is
+   * compared, but the table and failure message show only "present" / "absent".
+   */
+  containsPrivate(field: string, expected: string, haystack: string, note = 'value not reported (personal data)'): this {
+    const ok = expected !== '' && haystack.toLowerCase().includes(expected.toLowerCase());
+    this.rows.push({ field, expected: 'present', actual: ok ? 'present' : 'absent', result: ok ? 'MATCH' : 'MISMATCH', note });
+    return this;
+  }
+
   /** The confirmation text must contain at least one accepted rendering of the value (e.g. date formats). */
   containsAny(field: string, accepted: string[], haystack: string, note?: string): this {
     const hit = accepted.find((v) => haystack.toLowerCase().includes(v.toLowerCase()));

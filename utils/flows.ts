@@ -12,7 +12,7 @@ import { HotelBookingPage } from '../pages/hotels/HotelBookingPage';
 import { HotelSearchPage } from '../pages/hotels/HotelSearchPage';
 import { PrimeMemberDataError, type PrimeBookingPage, type PrimeTravellerPlan } from '../pages/prime/PrimeBookingPage';
 import type { PrimeAccountPage, PrimeMember } from '../pages/prime/PrimeAccountPage';
-import { PaymentBlockedError, PaymentFailedError, PaystackRouteError, type PaymentRoute } from '../components/payment/PaymentSection';
+import { PaymentBlockedError, PaymentFailedError, PaystackRouteError, type PaymentRoute, type PaymentSection } from '../components/payment/PaymentSection';
 import { KalabashCheckoutPage } from '../pages/payment/KalabashCheckoutPage';
 import { PaystackCheckoutPage } from '../pages/payment/PaystackCheckoutPage';
 import { PriceBreakdown, type ParsedBreakdown } from '../components/booking/PriceBreakdown';
@@ -173,7 +173,18 @@ async function recordRoute(testInfo: TestInfo, detail: string): Promise<void> {
  * Bank routes need ALLOW_TEST_BOOKING_SUBMISSION; Card and Kalabash move (test) money and also need
  * ALLOW_TEST_PAYMENT_AUTHENTICATION. Bot protection is never bypassed. The route used is always recorded.
  */
-export async function payAndConfirm(cart: CartPage, testInfo: TestInfo, blocked: Blocked, opts: { prime?: boolean; exclude?: PaymentRoute[] } = {}): Promise<PaymentOutcome> {
+/**
+ * Any page that ends in the shared payment step: the cart, and the visa application's "Review & pay" (observed 2026-11-23).
+ * `proceedToPayment()` creates the booking and returns its id; `payment` is the "Payment method" radio group step.
+ */
+export interface PaymentStep {
+  readonly page: Page;
+  readonly payment: PaymentSection;
+  readonly priceBreakdown: PriceBreakdown;
+  proceedToPayment(): Promise<string>;
+}
+
+export async function payAndConfirm(cart: PaymentStep, testInfo: TestInfo, blocked: Blocked, opts: { prime?: boolean; exclude?: PaymentRoute[] } = {}): Promise<PaymentOutcome> {
   const bookingId = await cart.proceedToPayment();
   testInfo.annotations.push({ type: 'booking', description: `Booking created: ${bookingId}` });
   const breakdown = await cart.priceBreakdown.read();

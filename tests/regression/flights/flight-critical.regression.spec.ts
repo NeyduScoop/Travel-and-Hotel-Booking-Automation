@@ -1,7 +1,7 @@
 import { test, expect, Tag } from '../../../fixtures/test.fixture';
 import { DataFactory } from '../../../utils/data.factory';
 import { cabinClasses, flightData } from '../../../data/flights/flight.data';
-import { elapsedMinutes, formatMinutes } from '../../../utils/duration';
+import { formatMinutes } from '../../../utils/duration';
 import { isoDate, shortMonth } from '../../../utils/date.utils';
 import { expectAllMatch } from '../../../utils/assertions';
 import { timeouts } from '../../../config/test.config';
@@ -129,22 +129,50 @@ test.describe('Flights regression – critical scenarios (TC-FLT-001…012)', { 
     expect(label, 'multi-city card label must name the first destination').toContain(`to ${legs[0].destination.code}`);
   });
 
-  test('TC-FLT-007 best-deals grid lists airlines and prices under the right stop category', { tag: [Tag.critical, Tag.positive] }, async ({ flightResults, blocked }) => {
-    await flightResults.openFor(DataFactory.oneWayFlight());
+  /**
+   * Clicking a priced "Best Deals by Airline" cell filters the results (observed 2026-11-24): the cell turns
+   * active, the stop filter and "Filter by <airline>" tick, and only that airline/stop category is listed,
+   * at the cell's price. One priced cell per stop category is exercised, each on a fresh search.
+   */
+  test('TC-FLT-007 best-deals grid lists airlines and prices under the right stop category', { tag: [Tag.critical, Tag.positive] }, async ({ flightResults, observe, blocked }) => {
+    const criteria = DataFactory.oneWayFlight();
+    await flightResults.openFor(criteria);
     if ((await flightResults.waitForOutcome()).kind === 'empty') blocked('MISSING INVENTORY');
     await expect(flightResults.bestDealsGrid).toBeVisible();
     const { airlines, rows } = await flightResults.bestDeals();
     expect(airlines.length).toBeGreaterThan(0);
     expect(rows.map((r) => r.category)).toEqual(['Non stop', '1 Stop', '2+ Stops']);
-    // Cross-check each priced cell against the cheapest visible card of that airline and stop category (expanding groups first).
-    while ((await flightResults.groupExpanders.count()) > 0) await flightResults.groupExpanders.first().click();
-    const cards = await flightResults.summaries();
-    for (const row of rows) {
-      for (const [airline, price] of Object.entries(row.prices)) {
-        const matching = cards.filter((c) => c.airline.startsWith(airline) && (row.category === 'Non stop' ? /direct/i.test(c.stopsLabel) : row.category === '1 Stop' ? /^1 stop/i.test(c.stopsLabel) : /^[2-9] stop/i.test(c.stopsLabel)));
-        if (price === null) expect(matching, `${airline} / ${row.category} shows "—" so no such card should exist`).toEqual([]);
-        else expect(Math.min(...matching.map((m) => m.price)), `${airline} / ${row.category} grid price`).toBe(price);
+    const targets = rows.flatMap((row) => {
+      const i = airlines.findIndex((a) => typeof row.prices[a] === 'number');
+      return i < 0 ? [] : [{ category: row.category, airlineIndex: i, airline: airlines[i], price: row.prices[airlines[i]] as number }];
+    });
+    expect(targets.length, 'at least one priced cell in the grid').toBeGreaterThan(0);
+    const stopFilter: Record<string, RegExp> = { 'Non stop': /^(Non.?stop|Direct)/i, '1 Stop': /^1 stop flights/i, '2+ Stops': /^2 or more stops/i };
+    const stopCard: Record<string, RegExp> = { 'Non stop': /direct|non.?stop/i, '1 Stop': /^1 stop/i, '2+ Stops': /^[2-9]\d* stops?/i };
+    const escapeRe = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    for (const [n, t] of targets.entries()) {
+      if (n > 0) {
+        await flightResults.openFor(criteria);
+        await flightResults.waitForOutcome();
       }
+      const cell = flightResults.bestDealsCell(t.airlineIndex, t.category);
+      await expect(cell, `${t.airline} / ${t.category} cell`).toContainText(`₦${t.price.toLocaleString('en-US')}`);
+      const foundBefore = await flightResults.foundCount();
+      await cell.click();
+      await expect.poll(() => flightResults.isBestDealsCellActive(cell), { message: `${t.airline} / ${t.category} cell marked active` }).toBe(true);
+      await expect(flightResults.loader).toBeHidden({ timeout: 60_000 });
+      await expect(flightResults.filters.checkbox(new RegExp(`^Filter by ${escapeRe(t.airline)}$`)), 'airline filter ticked').toBeChecked();
+      await expect(flightResults.filters.checkbox(stopFilter[t.category]).first(), `${t.category} filter ticked`).toBeChecked();
+      await expect.poll(() => flightResults.foundCount(), { message: 'result count narrows' }).toBeLessThan(foundBefore);
+      for (let guard = 0; guard < 20 && (await flightResults.groupExpanders.count()) > 0; guard += 1) await flightResults.groupExpanders.first().click();
+      const cards = await flightResults.summaries();
+      observe(`${t.airline} / ${t.category} ₦${t.price}: ${foundBefore} -> ${cards.length} cards`);
+      expect(cards.length).toBeGreaterThan(0);
+      for (const c of cards) {
+        expect(c.airline, 'only the clicked airline is listed').toBe(t.airline);
+        expect(c.stopsLabel, `only ${t.category} itineraries are listed`).toMatch(stopCard[t.category]);
+      }
+      expect(Math.min(...cards.map((c) => c.price)), 'cheapest listed fare = grid price').toBe(t.price);
     }
   });
 
@@ -181,23 +209,32 @@ test.describe('Flights regression – critical scenarios (TC-FLT-001…012)', { 
     });
   }
 
-  test('TC-FLT-010 card durations equal elapsed time across time zones, midnight and layovers', { tag: [Tag.critical, Tag.positive] }, async ({ flightResults, observe, blocked }) => {
-    const c = DataFactory.oneWayFlight();
-    await flightResults.openFor(c);
+  /**
+   * Owner rule (2026-11-24): total duration = Σ flight time of every segment + Σ layovers. A technical stop is
+   * not added (its ground time is inside the segment's flight time). Checked for every card on the first results
+   * page via "View Flight Details", against the card's displayed and announced durations.
+   */
+  test('TC-FLT-010 card durations equal elapsed time across time zones, midnight and layovers', { tag: [Tag.critical, Tag.positive] }, async ({ flightResults, flightDetails, observe, blocked }) => {
+    await flightResults.openFor(DataFactory.oneWayFlight());
     if ((await flightResults.waitForOutcome()).kind === 'empty') blocked('MISSING INVENTORY');
-    while ((await flightResults.groupExpanders.count()) > 0) await flightResults.groupExpanders.first().click();
     const problems: string[] = [];
-    for (const card of await flightResults.cards.all()) {
+    const count = await flightResults.cards.count();
+    let technical = 0;
+    for (let i = 0; i < count; i += 1) {
+      const card = flightResults.card(i);
       const s = await flightResults.summaryOf(card);
-      const [leg] = await flightResults.legTimesOf(card);
       const [shown] = await flightResults.legDurationsOf(card);
-      const elapsed = elapsedMinutes(leg.depart, leg.arrive, leg.arriveDayOffset, c.origin.code, c.destination.code);
-      const layoverTotal = (await flightResults.layoversOf(card)).reduce((a, l) => a + l.minutes, 0);
-      if (elapsed === null) { observe(`Unknown UTC offset for ${c.origin.code}/${c.destination.code}`); continue; }
-      if (s.durationMinutes !== shown) problems.push(`${s.airline}: label ${s.durationMinutes} min vs displayed ${formatMinutes(shown)}`);
-      if (elapsed !== s.durationMinutes) problems.push(`${s.airline} ${leg.depart}→${leg.arrive}+${leg.arriveDayOffset}: elapsed ${formatMinutes(elapsed)} vs shown ${formatMinutes(s.durationMinutes)}`);
-      if (layoverTotal >= s.durationMinutes) problems.push(`${s.airline}: layovers ${layoverTotal} min ≥ total ${s.durationMinutes} min`);
+      await flightDetails.expand(card);
+      const [leg] = await flightDetails.legBreakdown(card);
+      await flightDetails.collapse(card);
+      technical += leg.technicalStops.length;
+      const expected = leg.segments.reduce((a, m) => a + m, 0) + leg.layovers.reduce((a, m) => a + m, 0);
+      const tag = `${s.airline} ${s.stopsLabel} (card ${i + 1})`;
+      if (!leg.segments.length) { problems.push(`${tag}: no segment durations in the flight details`); continue; }
+      if (shown !== expected) problems.push(`${tag}: card shows ${formatMinutes(shown)} but segments ${leg.segments.map(formatMinutes).join(' + ')} + layovers ${leg.layovers.map(formatMinutes).join(' + ') || '0'} = ${formatMinutes(expected)}`);
+      if (s.durationMinutes !== shown) problems.push(`${tag}: announced ${s.durationMinutes} min vs displayed ${formatMinutes(shown)}`);
     }
+    observe(`${count} cards checked; ${technical} technical stop(s) seen and not added to the total`);
     expect(problems).toEqual([]);
   });
 
